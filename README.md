@@ -9,7 +9,7 @@ I am NOT A PROGRAMMER. I simply had fun prompting Gemini to output all the pytho
 <b>OK, now about the concept?</b>
 I just wanted a simple dashboard to manage all my python scripts more easily. With Python Lair you can:
 - Visualise and search for your scripts at a glance
-- Change view between List and Grid, and ajust sorting modes
+- Change view between List and Grid, and adjust sorting modes
 - Import scripts via Drag & Drop
 - Launch on GUI, on Terminal, Edit or Remove a script swiftly
 - The embedded script editor lets you read and modify the script, save or cancel the changes, and let you find specific text.
