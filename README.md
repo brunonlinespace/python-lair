@@ -1,4 +1,5 @@
-# linux-python-lair.py (legacy)
+# linux-python-lair.py (unmaintained)
+The new version of Python Lair is available in: https://github.com/brunonlinespace/python-lair
 A very simple launcher of python scripts and a very simple embedded editor for Linux, written in python.
 
 Hello, world!
