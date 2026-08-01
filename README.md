@@ -34,9 +34,8 @@ The files in the "Main" branch are the latest and greatest. The files in the "Ar
 5. Alternatively, you can grant "executable" permissions to the file and launch it via your file manager.
 6. Have fun!
 
-<strong>Current version: Version 46.</strong>
-- Layout fixes for Search and Clear buttons on dashboard.
-- Rest of the change log in the "Archive" branch (https://github.com/brunonlinespace/linux-python-lair.py/tree/archive).
+<strong>Last version: Version 78.</strong>
+- This version marks the end of Python Lair as a single python file. Check new version: https://github.com/brunonlinespace/python-lair
 
 <hr>
 <p>I thought this was a fun little project so I decided to share it in case you find it fun/useful too. You can help me make it better, but I do not plan to spend much time on this project unless it really does take off. I have no clue about python (yet?). I am also new in GitHub so please be kind to me :-P</p>
