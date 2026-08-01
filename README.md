@@ -1,5 +1,5 @@
 # linux-python-lair.py (unmaintained)
-The new version of Python Lair is available in: https://github.com/brunonlinespace/python-lair
+The <u><b>new version</b></u> of Python Lair is available in: https://github.com/brunonlinespace/python-lair
 
 Hello, world!
 
