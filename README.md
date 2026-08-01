@@ -1,4 +1,4 @@
-# linux-python-lair.py
+# linux-python-lair.py (legacy)
 A very simple launcher of python scripts and a very simple embedded editor for Linux, written in python.
 
 Hello, world!
