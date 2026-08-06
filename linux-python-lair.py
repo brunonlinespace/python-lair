@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ==============================================================================
-# Python Lair - Simple Launcher & Editor
+# Python Lair (legacy) - Simple Launcher & Editor
 # Copyright (C) 2026 AI Collaborator / brunonlinespace
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-# linux-python-lair.py
-# Version: 78 (Search/Clear Buttons In-Line with Sort Layout Update)
+# linux-python-lair-legacy.py
+# Version: 84 (Security & Data Loss Patches)
 # ==============================================================================
 
 import os
@@ -29,13 +29,13 @@ import shutil
 import subprocess
 from datetime import datetime
 from PyQt6.QtCore import Qt, QUrl, QRect, QSize, QPoint
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QAction, QKeyEvent, QPainter, QColor, QTextCursor
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QAction, QKeyEvent, QPainter, QColor, QTextCursor, QBrush
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QStackedWidget, QFrame, QTreeWidget, QTreeWidgetItem, QMessageBox, QTextEdit, QPlainTextEdit, QScrollArea, QLayout, QInputDialog, QLineEdit, QComboBox, QSplitter
 )
 
-MODULES_DIR = "my library"
+MODULES_DIR = "my nest"
 CONFIG_FILE = "suite_config.json"
 
 class FlowLayout(QLayout):
@@ -183,7 +183,7 @@ class CodeEditor(QPlainTextEdit):
         extra_selections = []
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
-            line_color = QColor("#2a2d2e")
+            line_color = QColor(42, 45, 46)
             selection.format.setBackground(line_color)
             selection.cursor = self.textCursor()
             selection.cursor.clearSelection()
@@ -192,7 +192,7 @@ class CodeEditor(QPlainTextEdit):
 
     def line_number_area_paint_event(self, event):
         painter = QPainter(self.line_number_area)
-        painter.fillRect(event.rect(), QColor("#1e1e1e"))
+        painter.fillRect(event.rect(), QColor(30, 30, 30))
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -202,7 +202,7 @@ class CodeEditor(QPlainTextEdit):
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
-                painter.setPen(QColor("#858585"))
+                painter.setPen(QColor(133, 133, 133))
                 painter.setFont(self.font())
                 painter.drawText(0, top, self.line_number_area.width() - 8, self.fontMetrics().height(),
                                  Qt.AlignmentFlag.AlignRight, number)
@@ -215,27 +215,25 @@ class CodeEditor(QPlainTextEdit):
                 bottom = top
             block_number += 1
 
+
 class LinuxPythonLauncherEditor(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Python Lair (v78) - Simple Launcher & Editor")
+        self.setWindowTitle("Python Lair (Legacy) v84 - Simple Launcher & Editor")
         self.resize(1350, 850)
 
         self.setAcceptDrops(True)
 
-        # Load both dashboard view mode and sorting preference from config
         self.dashboard_mode, self.sort_criterion = self.load_config_state()
         self.search_filter_text = ""
 
-        # Track editors, original contents, and header labels to check/alert for unsaved modifications
-        self.editors = {}            # path -> CodeEditor
-        self.original_contents = {}  # path -> str
-        self.title_labels = {}       # path -> QLabel (header title info label)
-        self.chmod_buttons = {}      # path -> QPushButton (toggle execution button references)
-        self.current_script_path = "dashboard" # currently active script path in editor/page stack
-        self.is_navigating = False    # Guard flag to prevent recursive nav triggers
+        self.editors = {}
+        self.original_contents = {}
+        self.title_labels = {}
+        self.chmod_buttons = {}
+        self.current_script_path = "dashboard"
+        self.is_navigating = False
         
-        # Track explicitly collapsed folders across refreshes/rebuilds
         self.collapsed_folders = set()
 
         self.central_widget = QWidget()
@@ -247,13 +245,17 @@ class LinuxPythonLauncherEditor(QMainWindow):
         self.processes = {}
         self.modules = self.discover_modules()
 
-        # Use a QSplitter to allow adjustable sidebar sizing
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.setStyleSheet("QSplitter::handle { background-color: #333338; width: 3px; }")
         self.main_layout.addWidget(self.splitter)
 
         self.setup_sidebar()
         self.setup_content_area()
+
+    def is_valid_filename(self, name):
+        """Sanitizes input to prevent path traversal and invalid characters."""
+        if not name or "/" in name or "\\" in name or ".." in name:
+            return False
+        return True
 
     def load_config_state(self):
         dash_mode = "list"
@@ -330,59 +332,37 @@ class LinuxPythonLauncherEditor(QMainWindow):
             return sorted(mods, key=lambda x: x['created'], reverse=True)
         elif self.sort_criterion == "modified":
             return sorted(mods, key=lambda x: x['modified'], reverse=True)
-        else: # Default "title_az"
+        else:
             return sorted(mods, key=lambda x: x['name'].lower())
 
     def setup_sidebar(self):
         sidebar = QFrame()
         sidebar.setMinimumWidth(200)
-        sidebar.setStyleSheet("background-color: #252526; color: #ffffff;")
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(10, 20, 10, 20)
 
-        title_lbl = QLabel("<h3>🛠️ Workspace</h3>")
+        title_lbl = QLabel("<h3>My Nest</h3>")
         sidebar_layout.addWidget(title_lbl)
 
-        info_drop_lbl = QLabel("<font color='#9cdcfe'>💡 Tip: Drag & drop .py scripts onto the Dashboard to add them!</font>")
+        info_drop_lbl = QLabel("Tip: Drag & drop .py scripts onto the Dashboard to import them!")
         info_drop_lbl.setWordWrap(True)
-        info_drop_lbl.setStyleSheet("font-size: 8.5pt; margin-bottom: 5px;")
         sidebar_layout.addWidget(info_drop_lbl)
 
-        mode_btn_text = "🔲 Grid View" if self.dashboard_mode == "list" else "📋 List View"
+        self.dashboard_btn = QPushButton("Dashboard")
+        self.dashboard_btn.clicked.connect(lambda: self.jump_to_module_page("dashboard"))
+        sidebar_layout.addWidget(self.dashboard_btn)
+
+        mode_btn_text = "Grid View" if self.dashboard_mode == "list" else "List View"
         self.mode_toggle_btn = QPushButton(mode_btn_text)
-        self.mode_toggle_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #333337; color: #ffffff; border: 1px solid #555;
-                border-radius: 4px; padding: 6px; font-weight: bold; margin-bottom: 5px;
-            }
-            QPushButton:hover {
-                background-color: #007acc; border-color: #007acc;
-            }
-        """)
         self.mode_toggle_btn.clicked.connect(self.toggle_dashboard_mode)
         sidebar_layout.addWidget(self.mode_toggle_btn)
 
-        refresh_btn = QPushButton("🔄 Refresh Scripts")
-        refresh_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #333337; color: #dcdcdc; border: 1px solid #555; 
-                border-radius: 4px; padding: 6px; font-weight: bold; margin-bottom: 10px;
-            }
-            QPushButton:hover {
-                background-color: #3e3e42; border-color: #007acc;
-            }
-        """)
+        refresh_btn = QPushButton("Refresh Scripts")
         refresh_btn.clicked.connect(self.refresh_modules_from_disk)
         sidebar_layout.addWidget(refresh_btn)
 
         self.nav_tree = AccessibleTreeWidget()
         self.nav_tree.setHeaderHidden(True)
-        self.nav_tree.setStyleSheet("""
-            QTreeWidget { background-color: #252526; border: none; color: #dcdcdc; font-size: 11pt; }
-            QTreeWidget::item { padding: 6px; border-radius: 4px; margin-bottom: 2px; }
-            QTreeWidget::item:selected { background-color: #007acc; color: #ffffff; font-weight: bold; }
-            QTreeWidget::item:hover:!selected { background-color: #3e3e42; }
-        """)
         
         self.populate_nav_tree()
         self.nav_tree.itemClicked.connect(self.on_nav_item_clicked)
@@ -393,7 +373,6 @@ class LinuxPythonLauncherEditor(QMainWindow):
 
         self.status_lbl = QLabel()
         self.status_lbl.setWordWrap(True)
-        self.status_lbl.setStyleSheet("font-size: 9pt; margin-top: 5px;")
         self.update_status_label("Loaded successfully.")
         sidebar_layout.addWidget(self.status_lbl)
 
@@ -412,7 +391,7 @@ class LinuxPythonLauncherEditor(QMainWindow):
     def update_status_label(self, base_message="Ready."):
         unsaved_count = sum(1 for p in self.editors if self.has_unsaved_changes(p))
         if unsaved_count > 0:
-            self.status_lbl.setText(f"Status: {base_message} <font color='#cca700'><b>(⚠️ {unsaved_count} unsaved)</b></font>")
+            self.status_lbl.setText(f"Status: {base_message} ({unsaved_count} unsaved modifications)")
         else:
             self.status_lbl.setText(f"Status: {base_message}")
 
@@ -439,19 +418,16 @@ class LinuxPythonLauncherEditor(QMainWindow):
     def populate_nav_tree(self):
         self.nav_tree.clear()
         
-        dashboard_item = QTreeWidgetItem(self.nav_tree, ["🏠 Dashboard"])
-        dashboard_item.setData(0, Qt.ItemDataRole.UserRole, "dashboard")
-        self.nav_tree.addTopLevelItem(dashboard_item)
-        
         sorted_mods = self.sort_modules(self.modules)
         folder_nodes = {}
 
         for mod in sorted_mods:
             folder_path = mod['folder']
             
-            label_text = f"📦 {mod['name']}"
-            if mod['path'] in self.editors and self.has_unsaved_changes(mod['path']):
-                label_text += " ⚠️"
+            label_text = mod['name']
+            is_unsaved = mod['path'] in self.editors and self.has_unsaved_changes(mod['path'])
+            if is_unsaved:
+                label_text += " [Unsaved]"
 
             if not folder_path or folder_path == ".":
                 script_item = QTreeWidgetItem(self.nav_tree, [label_text])
@@ -463,10 +439,9 @@ class LinuxPythonLauncherEditor(QMainWindow):
                 for part in parts:
                     current_accumulated = os.path.join(current_accumulated, part) if current_accumulated else part
                     if current_accumulated not in folder_nodes:
-                        folder_node = QTreeWidgetItem(parent_widget, [f"📁 {part}"])
+                        folder_node = QTreeWidgetItem(parent_widget, [part])
                         folder_node.setData(0, Qt.ItemDataRole.UserRole + 1, current_accumulated)
                         
-                        # Default to expanded unless user explicitly collapsed it
                         is_collapsed = current_accumulated in self.collapsed_folders
                         folder_node.setExpanded(not is_collapsed)
                         
@@ -478,6 +453,9 @@ class LinuxPythonLauncherEditor(QMainWindow):
                 script_item = QTreeWidgetItem(parent_widget, [label_text])
                 script_item.setData(0, Qt.ItemDataRole.UserRole, mod['path'])
 
+            if is_unsaved:
+                script_item.setForeground(0, QBrush(QColor("#f1c40f")))
+
     def update_nav_item_indicators(self):
         self.populate_nav_tree()
         self.jump_to_module_page(self.current_script_path)
@@ -487,14 +465,14 @@ class LinuxPythonLauncherEditor(QMainWindow):
             if mod_info:
                 title_lbl = self.title_labels[self.current_script_path]
                 if self.has_unsaved_changes(self.current_script_path):
-                    title_lbl.setText(f"<h2>{mod_info['name']} <font color='#cca700' size='4'>[⚠️ Unsaved Modifications]</font></h2><font color='#858585'>{mod_info['path']}</font>")
+                    title_lbl.setText(f"<h2>{mod_info['name']} <font color='#f1c40f'>[Unsaved Modifications]</font></h2><font color='#858585'>{mod_info['path']}</font>")
                 else:
                     title_lbl.setText(f"<h2>{mod_info['name']}</h2><font color='#858585'>{mod_info['path']}</font>")
 
         if self.current_script_path == "dashboard" and hasattr(self, 'dashboard_unsaved_banner'):
             unsaved_count = sum(1 for p in self.editors if self.has_unsaved_changes(p))
             if unsaved_count > 0:
-                self.dashboard_unsaved_banner.setText(f"<b>⚠️ Warning: You have unsaved changes in {unsaved_count} script(s).</b> Switch to them from the sidebar to review or save.")
+                self.dashboard_unsaved_banner.setText(f"Warning: You have unsaved changes in {unsaved_count} script(s). Switch to them from the sidebar to review or save.")
                 self.dashboard_unsaved_banner.setVisible(True)
             else:
                 self.dashboard_unsaved_banner.setVisible(False)
@@ -507,19 +485,16 @@ class LinuxPythonLauncherEditor(QMainWindow):
         self.refresh_content_pages()
         self.is_navigating = True
         
-        root_item = self.nav_tree.topLevelItem(0)
-        if root_item:
-            self.nav_tree.setCurrentItem(root_item)
-            
+        self.jump_to_module_page("dashboard")
         self.is_navigating = False
 
     def toggle_dashboard_mode(self):
         if self.dashboard_mode == "list":
             self.dashboard_mode = "grid"
-            self.mode_toggle_btn.setText("📋 List View")
+            self.mode_toggle_btn.setText("List View")
         else:
             self.dashboard_mode = "list"
-            self.mode_toggle_btn.setText("🔲 Grid View")
+            self.mode_toggle_btn.setText("Grid View")
         
         self.save_config_state()
         self.refresh_content_pages()
@@ -534,6 +509,12 @@ class LinuxPythonLauncherEditor(QMainWindow):
             return f"{size_bytes / (1024 * 1024):.1f} MB"
 
     def refresh_content_pages(self):
+        # Cache unsaved changes so they aren't lost on UI refresh
+        unsaved_cache = {}
+        for path, editor in self.editors.items():
+            if self.has_unsaved_changes(path):
+                unsaved_cache[path] = editor.toPlainText()
+
         self.editors.clear()
         self.original_contents.clear()
         self.title_labels.clear()
@@ -546,57 +527,41 @@ class LinuxPythonLauncherEditor(QMainWindow):
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
 
         dash_widget = QWidget()
         dash_layout = QVBoxLayout(dash_widget)
         dash_layout.setContentsMargins(30, 30, 30, 30)
         
-        title_label = QLabel("<h1>Python Lair - Simple Launcher & Editor</h1>")
+        title_label = QLabel("<h1>⚕ Python Lair (Legacy) - Simple Launcher & Editor</h1>")
         title_label.setWordWrap(True)
         dash_layout.addWidget(title_label)
 
         self.dashboard_unsaved_banner = QLabel()
         self.dashboard_unsaved_banner.setWordWrap(True)
-        self.dashboard_unsaved_banner.setStyleSheet("""
-            QLabel {
-                background-color: #3b3012; border: 1px solid #cca700; color: #ffd700;
-                padding: 10px; border-radius: 4px; font-size: 10pt; margin-top: 5px; margin-bottom: 5px;
-            }
-        """)
-        unsaved_count_init = sum(1 for p in self.editors if self.has_unsaved_changes(p))
+        # We check the cache here as well because self.editors is currently empty
+        unsaved_count_init = len(unsaved_cache)
         if unsaved_count_init > 0:
-            self.dashboard_unsaved_banner.setText(f"<b>⚠️ Warning: You have unsaved changes in {unsaved_count_init} script(s).</b> Switch to them from the sidebar to review or save.")
+            self.dashboard_unsaved_banner.setText(f"Warning: You have unsaved changes in {unsaved_count_init} script(s). Switch to them from the sidebar to review or save.")
             self.dashboard_unsaved_banner.setVisible(True)
         else:
             self.dashboard_unsaved_banner.setVisible(False)
         dash_layout.addWidget(self.dashboard_unsaved_banner)
 
-        desc_label = QLabel("Welcome! <b>Drag and drop any Python (.py) script file directly onto this window</b> or edit files externally in the <b>my library/</b> folder, then click <b>Refresh Scripts</b>.")
+        desc_label = QLabel("Welcome! Drag and drop any Python (.py) script file directly onto this window or edit files externally in the <b>my nest/</b> folder, then click <b>Refresh Scripts</b>.")
         desc_label.setWordWrap(True)
         dash_layout.addWidget(desc_label)
         
         dash_layout.addSpacing(10)
 
-        # Row 1: Search bar (spanning full width)
         search_bar_layout = QHBoxLayout()
         search_bar_layout.setSpacing(10)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍 Search scripts by title or filename...")
+        self.search_input.setPlaceholderText("Search scripts by title or filename...")
         self.search_input.setText(self.search_filter_text)
-        self.search_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e; color: #dcdcdc; border: 1px solid #3f3f46;
-                border-radius: 4px; padding: 8px; padding-right: 32px; font-size: 10pt;
-            }
-            QLineEdit:focus {
-                border-color: #007acc;
-            }
-        """)
         self.search_input.returnPressed.connect(self.trigger_search)
 
-        search_action = QAction("🔍", self.search_input)
+        search_action = QAction("Search", self.search_input)
         search_action.setToolTip("Click to search")
         search_action.triggered.connect(self.trigger_search)
         self.search_input.addAction(search_action, QLineEdit.ActionPosition.TrailingPosition)
@@ -605,51 +570,28 @@ class LinuxPythonLauncherEditor(QMainWindow):
         dash_layout.addLayout(search_bar_layout)
         dash_layout.addSpacing(5)
 
-        # Row 2: Search, Clear, and Sort controls unified in a single in-line row
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(10)
 
         search_btn = QPushButton("Search")
-        search_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #007acc; color: #ffffff; border: none;
-                border-radius: 4px; padding: 6px 12px; font-weight: bold; font-size: 9.5pt;
-            }
-            QPushButton:hover {
-                background-color: #0098ff;
-            }
-        """)
         search_btn.clicked.connect(self.trigger_search)
         controls_layout.addWidget(search_btn)
 
         clear_search_btn = QPushButton("Clear")
-        clear_search_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #333337; color: #dcdcdc; border: 1px solid #555;
-                border-radius: 4px; padding: 6px 12px; font-weight: bold; font-size: 9.5pt;
-            }
-            QPushButton:hover {
-                background-color: #511; border-color: #f88; color: #f88;
-            }
-        """)
         clear_search_btn.clicked.connect(self.clear_search_filter)
         controls_layout.addWidget(clear_search_btn)
 
-        # Add visual separator line
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.VLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet("color: #3f3f46; margin-left: 4px; margin-right: 4px;")
-        controls_layout.addWidget(separator)
+        separator1 = QFrame()
+        separator1.setFrameShape(QFrame.Shape.VLine)
+        separator1.setFrameShadow(QFrame.Shadow.Sunken)
+        controls_layout.addWidget(separator1)
 
         sort_label = QLabel("Sort by:")
-        sort_label.setStyleSheet("color: #dcdcdc; font-weight: bold;")
         controls_layout.addWidget(sort_label)
 
         self.sort_combo = QComboBox()
         self.sort_combo.addItems(["Title (A-Z)", "Title (Z-A)", "Last Created", "Last Modified"])
         
-        # Set initial combo box index matching the persisted sort criterion
         if self.sort_criterion == "title_za":
             self.sort_combo.setCurrentIndex(1)
         elif self.sort_criterion == "created":
@@ -659,18 +601,22 @@ class LinuxPythonLauncherEditor(QMainWindow):
         else:
             self.sort_combo.setCurrentIndex(0)
             
-        self.sort_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #2d2d30; color: #dcdcdc; border: 1px solid #3f3f46;
-                border-radius: 4px; padding: 6px; font-size: 9.5pt;
-            }
-            QComboBox::drop-down { border: none; }
-            QComboBox QAbstractItemView {
-                background-color: #2d2d30; color: #dcdcdc; selection-background-color: #007acc; selection-color: #ffffff;
-            }
-        """)
         self.sort_combo.currentIndexChanged.connect(self.on_sort_changed)
         controls_layout.addWidget(self.sort_combo)
+        
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.Shape.VLine)
+        separator2.setFrameShadow(QFrame.Shadow.Sunken)
+        controls_layout.addWidget(separator2)
+
+        new_script_btn = QPushButton("New Script")
+        new_script_btn.setStyleSheet("background-color: #2b78e4; color: white; border-radius: 4px; padding: 5px 10px; border: none;")
+        new_script_btn.clicked.connect(self.create_new_script_prompt)
+        controls_layout.addWidget(new_script_btn)
+
+        new_folder_btn = QPushButton("New Folder")
+        new_folder_btn.clicked.connect(self.create_new_folder_prompt)
+        controls_layout.addWidget(new_folder_btn)
         
         controls_layout.addStretch()
         dash_layout.addLayout(controls_layout)
@@ -683,14 +629,12 @@ class LinuxPythonLauncherEditor(QMainWindow):
         sorted_dashboard_mods = self.sort_modules(filtered_mods)
 
         if not self.modules:
-            no_mod_lbl = QLabel("<i>No python scripts found. Add scripts to the modules folder or drop them here!</i>")
+            no_mod_lbl = QLabel("No python scripts found. Add scripts to the modules folder or drop them here!")
             no_mod_lbl.setWordWrap(True)
-            no_mod_lbl.setStyleSheet("color: #d16969; margin-top: 15px;")
             dash_layout.addWidget(no_mod_lbl)
         elif not sorted_dashboard_mods:
-            no_match_lbl = QLabel(f"<i>No scripts matched your search query '{self.search_filter_text}'.</i>")
+            no_match_lbl = QLabel(f"No scripts matched your search query '{self.search_filter_text}'.")
             no_match_lbl.setWordWrap(True)
-            no_match_lbl.setStyleSheet("color: #9cdcfe; margin-top: 15px;")
             dash_layout.addWidget(no_match_lbl)
         else:
             if self.dashboard_mode == "list":
@@ -699,45 +643,35 @@ class LinuxPythonLauncherEditor(QMainWindow):
 
                 for mod in sorted_dashboard_mods:
                     card_frame = QFrame()
-                    card_frame.setStyleSheet("""
-                        QFrame {
-                            background-color: #1e1e1e;
-                            border: 1px solid #333338;
-                            border-radius: 6px;
-                        }
-                        QFrame:hover {
-                            border: 1px solid #007acc;
-                            background-color: #252526;
-                        }
-                    """)
+                    card_frame.setFrameShape(QFrame.Shape.StyledPanel)
+                    card_frame.setFrameShadow(QFrame.Shadow.Raised)
+                    card_frame.setStyleSheet("QFrame { border: 1px solid #444444; border-radius: 6px; }")
                     card_layout = QHBoxLayout(card_frame)
                     card_layout.setContentsMargins(15, 12, 15, 12)
                     
-                    exec_badge = " <font color='#4ec9b0' size='2'>[Executable]</font>" if mod['executable'] else ""
-                    sub_folder_info = f" <font color='#858585' size='2'>({mod['rel_path']})</font>"
-                    info_lbl = QLabel(f"<span style='color: #ffffff; font-size: 11pt;'><b>{mod['name']}</b></span>{exec_badge}{sub_folder_info}<br><span style='color: #858585; font-size: 9pt;'>{mod['path']}</span>")
+                    exec_badge = " [Executable]" if mod['executable'] else ""
+                    sub_folder_info = f" ({mod['rel_path']})"
+                    info_lbl = QLabel(f"<b>{mod['name']}</b>{exec_badge}{sub_folder_info}<br>{mod['path']}")
                     info_lbl.setWordWrap(True)
-                    info_lbl.setStyleSheet("border: none; background: transparent;")
+                    info_lbl.setStyleSheet("border: none;")
                     
                     btn_layout = QHBoxLayout()
                     btn_layout.setSpacing(8)
 
-                    launch_btn = QPushButton("▶ Launch")
+                    launch_btn = QPushButton("Launch")
+                    launch_btn.setStyleSheet("background-color: #2b78e4; color: white; border-radius: 4px; padding: 5px 10px; border: none;")
                     launch_btn.setToolTip("Run script in standard background process")
-                    launch_btn.setStyleSheet("background-color: #007acc; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold;")
                     launch_btn.clicked.connect(lambda checked, path=mod['path']: self.launch_external_persistent(path))
 
                     term_btn = QPushButton("Terminal")
                     term_btn.setToolTip("Launch TUI / script in an external interactive terminal emulator")
-                    term_btn.setStyleSheet("background-color: #2d5a2d; color: #cfc; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold;")
                     term_btn.clicked.connect(lambda checked, path=mod['path']: self.launch_in_terminal(path))
 
                     edit_btn = QPushButton("Edit")
-                    edit_btn.setStyleSheet("background-color: #333337; color: #dcdcdc; border: 1px solid #555; border-radius: 4px; padding: 6px 10px;")
                     edit_btn.clicked.connect(lambda checked, p=mod['path']: self.jump_to_module_page(p))
 
                     del_btn = QPushButton("Remove")
-                    del_btn.setStyleSheet("background-color: #511; color: #f88; border: none; padding: 6px 10px; border-radius: 4px;")
+                    del_btn.setStyleSheet("background-color: #d93838; color: white; border-radius: 4px; padding: 5px 10px; border: none;")
                     del_btn.clicked.connect(lambda checked, path=mod['path']: self.remove_module(path))
 
                     btn_layout.addWidget(launch_btn)
@@ -757,34 +691,26 @@ class LinuxPythonLauncherEditor(QMainWindow):
 
                 for mod in sorted_dashboard_mods:
                     card_frame = QFrame()
+                    card_frame.setFrameShape(QFrame.Shape.StyledPanel)
+                    card_frame.setFrameShadow(QFrame.Shadow.Raised)
                     card_frame.setFixedSize(270, 155)
-                    card_frame.setStyleSheet("""
-                        QFrame {
-                            background-color: #1e1e1e;
-                            border: 1px solid #333338;
-                            border-radius: 6px;
-                        }
-                        QFrame:hover {
-                            border: 1px solid #007acc;
-                            background-color: #252526;
-                        }
-                    """)
+                    card_frame.setStyleSheet("QFrame { border: 1px solid #444444; border-radius: 6px; }")
                     grid_card_layout = QVBoxLayout(card_frame)
                     grid_card_layout.setContentsMargins(10, 10, 10, 10)
                     grid_card_layout.setSpacing(4)
 
-                    exec_tag = " <font color='#4ec9b0'>[+x]</font>" if mod['executable'] else ""
-                    title_lbl = QLabel(f"<b>📦 {mod['name']}</b>{exec_tag}")
-                    title_lbl.setStyleSheet("color: #ffffff; font-size: 10pt; border: none; background: transparent;")
+                    exec_tag = " [+x]" if mod['executable'] else ""
+                    title_lbl = QLabel(f"<b>{mod['name']}</b>{exec_tag}")
                     title_lbl.setWordWrap(True)
+                    title_lbl.setStyleSheet("border: none;")
                     grid_card_layout.addWidget(title_lbl)
 
                     created_time_str = datetime.fromtimestamp(mod['created']).strftime('%Y-%m-%d %H:%M') if mod['created'] else "Unknown"
                     size_str = self.format_size(mod['size'])
 
-                    meta_lbl = QLabel(f"<font color='#858585' size='2'>Path: {mod['rel_path']}<br>Created: {created_time_str}<br>Size: {size_str}</font>")
-                    meta_lbl.setStyleSheet("border: none; background: transparent;")
+                    meta_lbl = QLabel(f"Path: {mod['rel_path']}<br>Created: {created_time_str}<br>Size: {size_str}")
                     meta_lbl.setWordWrap(True)
+                    meta_lbl.setStyleSheet("border: none;")
                     grid_card_layout.addWidget(meta_lbl)
 
                     grid_card_layout.addStretch()
@@ -793,19 +719,17 @@ class LinuxPythonLauncherEditor(QMainWindow):
                     grid_btn_layout.setSpacing(4)
 
                     launch_btn = QPushButton("Launch")
-                    launch_btn.setStyleSheet("background-color: #007acc; color: white; border: none; padding: 4px 6px; border-radius: 3px; font-weight: bold; font-size: 8pt;")
+                    launch_btn.setStyleSheet("background-color: #2b78e4; color: white; border-radius: 3px; padding: 3px 6px; border: none;")
                     launch_btn.clicked.connect(lambda checked, path=mod['path']: self.launch_external_persistent(path))
 
                     term_btn = QPushButton("Terminal")
-                    term_btn.setStyleSheet("background-color: #2d5a2d; color: #cfc; border: none; padding: 4px 6px; border-radius: 3px; font-weight: bold; font-size: 8pt;")
                     term_btn.clicked.connect(lambda checked, path=mod['path']: self.launch_in_terminal(path))
 
                     edit_btn = QPushButton("Edit")
-                    edit_btn.setStyleSheet("background-color: #333337; color: #dcdcdc; border: 1px solid #555; border-radius: 3px; padding: 4px 6px; font-size: 8pt;")
                     edit_btn.clicked.connect(lambda checked, p=mod['path']: self.jump_to_module_page(p))
 
                     del_btn = QPushButton("Del")
-                    del_btn.setStyleSheet("background-color: #511; color: #f88; border: none; padding: 4px 6px; border-radius: 3px; font-size: 8pt;")
+                    del_btn.setStyleSheet("background-color: #d93838; color: white; border-radius: 3px; padding: 3px 6px; border: none;")
                     del_btn.clicked.connect(lambda checked, path=mod['path']: self.remove_module(path))
 
                     grid_btn_layout.addWidget(launch_btn)
@@ -836,31 +760,27 @@ class LinuxPythonLauncherEditor(QMainWindow):
             btn_row = QHBoxLayout()
             btn_row.setSpacing(8)
             
-            action_btn = QPushButton("▶ Launch")
-            action_btn.setStyleSheet("padding: 8px 12px; font-weight: bold; background-color: #007acc; color: white; border: none; border-radius: 4px;")
+            action_btn = QPushButton("Launch")
+            action_btn.setStyleSheet("background-color: #2b78e4; color: white; border-radius: 4px; padding: 5px 10px;")
             action_btn.clicked.connect(lambda checked, path=mod['path']: self.launch_external_persistent(path))
 
             term_action_btn = QPushButton("Terminal")
-            term_action_btn.setStyleSheet("padding: 8px 12px; font-weight: bold; background-color: #2d5a2d; color: #cfc; border: none; border-radius: 4px;")
             term_action_btn.clicked.connect(lambda checked, path=mod['path']: self.launch_in_terminal(path))
 
             ext_edit_btn = QPushButton("External Editor")
             ext_edit_btn.setToolTip("Open script in an external system text editor")
-            ext_edit_btn.setStyleSheet("padding: 8px 12px; background-color: #333337; color: #dcdcdc; border: 1px solid #555; border-radius: 4px;")
             ext_edit_btn.clicked.connect(lambda checked, path=mod['path']: self.open_in_external_editor(path))
 
             rename_btn = QPushButton("Rename")
-            rename_btn.setStyleSheet("padding: 8px 12px; background-color: #333337; color: #dcdcdc; border: 1px solid #555; border-radius: 4px;")
             rename_btn.clicked.connect(lambda checked, path=mod['path']: self.rename_script_file(path))
 
             chmod_text = "Make Unexecutable" if mod['executable'] else "Make Executable"
             chmod_btn = QPushButton(chmod_text)
-            chmod_btn.setStyleSheet("padding: 8px 12px; background-color: #333337; color: #dcdcdc; border: 1px solid #555; border-radius: 4px;")
             chmod_btn.clicked.connect(lambda checked, path=mod['path']: self.toggle_executable(path))
             self.chmod_buttons[mod['path']] = chmod_btn
             
             del_btn = QPushButton("Remove")
-            del_btn.setStyleSheet("padding: 8px 12px; background-color: #511; color: #f88; border: none; border-radius: 4px;")
+            del_btn.setStyleSheet("background-color: #d93838; color: white; border-radius: 4px; padding: 5px 10px;")
             del_btn.clicked.connect(lambda checked, path=mod['path']: self.remove_module(path))
 
             btn_row.addWidget(action_btn)
@@ -872,15 +792,18 @@ class LinuxPythonLauncherEditor(QMainWindow):
             btn_row.addStretch()
             layout.addLayout(btn_row)
 
-            editor_label = QLabel("<b>Embedded Script Editor:</b>")
-            editor_label.setStyleSheet("margin-top: 10px;")
+            editor_label = QLabel("Embedded Script Editor:")
             layout.addWidget(editor_label)
 
             text_editor = CodeEditor()
             text_editor.setFont(QFont("Courier New", 10))
-            text_editor.setStyleSheet("background-color: #1e1e1e; color: #dcdcdc; border: 1px solid #3f3f46; border-radius: 4px;")
             
             self.load_editor_content(mod['path'], text_editor)
+            
+            # Re-inject unsaved content if it exists
+            if mod['path'] in unsaved_cache:
+                text_editor.setPlainText(unsaved_cache[mod['path']])
+                
             self.editors[mod['path']] = text_editor
             
             text_editor.textChanged.connect(lambda p=mod['path']: self.on_text_modified(p))
@@ -893,31 +816,21 @@ class LinuxPythonLauncherEditor(QMainWindow):
             find_input = QLineEdit()
             find_input.setPlaceholderText("Find text...")
             find_input.setFixedWidth(180)
-            find_input.setStyleSheet("""
-                QLineEdit {
-                    background-color: #1e1e1e; color: #dcdcdc; border: 1px solid #3f3f46;
-                    border-radius: 4px; padding: 6px; font-size: 9.5pt;
-                }
-                QLineEdit:focus {
-                    border-color: #007acc;
-                }
-            """)
             
             find_btn = QPushButton("Find")
             find_btn.setFixedWidth(75)
-            find_btn.setStyleSheet("padding: 8px; background-color: #333337; color: #dcdcdc; border: 1px solid #555; border-radius: 4px;")
             
             find_btn.clicked.connect(lambda checked, ed=text_editor, fi=find_input: self.find_text_in_editor(ed, fi))
             find_input.returnPressed.connect(lambda ed=text_editor, fi=find_input: self.find_text_in_editor(ed, fi))
 
-            cancel_btn = QPushButton("↩ Cancel Changes")
+            cancel_btn = QPushButton("Cancel Changes")
             cancel_btn.setFixedWidth(150)
-            cancel_btn.setStyleSheet("padding: 8px; background-color: #333337; color: #ccc; border: 1px solid #555; border-radius: 4px;")
+            cancel_btn.setStyleSheet("background-color: #d9a404; color: black; border-radius: 4px; padding: 5px 10px;")
             cancel_btn.clicked.connect(lambda checked, p=mod['path'], ed=text_editor: self.reload_module_code(p, ed))
 
-            save_btn = QPushButton("💾 Save Changes")
+            save_btn = QPushButton("Save Changes")
             save_btn.setFixedWidth(160)
-            save_btn.setStyleSheet("padding: 8px; background-color: #285228; color: #cfc; border: none; border-radius: 4px; font-weight: bold;")
+            save_btn.setStyleSheet("background-color: #2b9348; color: white; border-radius: 4px; padding: 5px 10px;")
             save_btn.clicked.connect(lambda checked, p=mod['path'], ed=text_editor: self.save_module_code(p, ed))
             
             editor_btn_layout.addWidget(find_input)
@@ -927,6 +840,82 @@ class LinuxPythonLauncherEditor(QMainWindow):
             layout.addLayout(editor_btn_layout)
 
             self.stack.addWidget(page)
+
+    def create_new_script_prompt(self):
+        folders = ["."]
+        for root, dirs, files in os.walk(MODULES_DIR):
+            for d in dirs:
+                rel = os.path.relpath(os.path.join(root, d), MODULES_DIR)
+                folders.append(rel)
+
+        folder, ok_f = QInputDialog.getItem(self, "New Script", "Select target folder:", folders, 0, False)
+        if not ok_f:
+            return
+
+        script_name, ok_s = QInputDialog.getText(self, "New Script", "Enter script filename (e.g. myscript.py):")
+        if not ok_s or not script_name.strip():
+            return
+
+        script_name = script_name.strip()
+        if not self.is_valid_filename(script_name):
+            QMessageBox.warning(self, "Error", "Invalid characters in filename. Do not use slashes or relative paths.")
+            return
+            
+        if not script_name.endswith(".py"):
+            script_name += ".py"
+
+        target_dir = MODULES_DIR if folder == "." else os.path.join(MODULES_DIR, folder)
+        full_path = os.path.join(target_dir, script_name)
+
+        if os.path.exists(full_path):
+            QMessageBox.warning(self, "Error", f"A script named '{script_name}' already exists in that folder.")
+            return
+
+        try:
+            if not os.path.exists(target_dir):
+                os.makedirs(target_dir, exist_ok=True)
+            with open(full_path, 'w', encoding='utf-8') as f:
+                f.write("#!/usr/bin/env python3\n\nprint('Hello from Python Lair!')\n")
+            
+            self.refresh_modules_from_disk()
+            self.jump_to_module_page(full_path)
+            self.update_status_label(f"Created new script: {script_name}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not create script file: {e}")
+
+    def create_new_folder_prompt(self):
+        folders = ["."]
+        for root, dirs, files in os.walk(MODULES_DIR):
+            for d in dirs:
+                rel = os.path.relpath(os.path.join(root, d), MODULES_DIR)
+                folders.append(rel)
+
+        parent_folder, ok_f = QInputDialog.getItem(self, "New Folder", "Select parent folder:", folders, 0, False)
+        if not ok_f:
+            return
+
+        folder_name, ok_n = QInputDialog.getText(self, "New Folder", "Enter new folder name:")
+        if not ok_n or not folder_name.strip():
+            return
+
+        folder_name = folder_name.strip()
+        if not self.is_valid_filename(folder_name):
+            QMessageBox.warning(self, "Error", "Invalid characters in folder name. Do not use slashes or relative paths.")
+            return
+            
+        base_target = MODULES_DIR if parent_folder == "." else os.path.join(MODULES_DIR, parent_folder)
+        new_folder_path = os.path.join(base_target, folder_name)
+
+        if os.path.exists(new_folder_path):
+            QMessageBox.warning(self, "Error", f"A folder named '{folder_name}' already exists.")
+            return
+
+        try:
+            os.makedirs(new_folder_path, exist_ok=True)
+            self.refresh_modules_from_disk()
+            self.update_status_label(f"Created new folder: {folder_name}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not create folder: {e}")
 
     def find_text_in_editor(self, editor, find_input):
         query = find_input.text()
@@ -985,9 +974,7 @@ class LinuxPythonLauncherEditor(QMainWindow):
         if script_path == "dashboard":
             self.switch_view(0)
             self.is_navigating = True
-            root_item = self.nav_tree.topLevelItem(0)
-            if root_item:
-                self.nav_tree.setCurrentItem(root_item)
+            self.nav_tree.clearSelection()
             self.is_navigating = False
             return
 
@@ -1042,6 +1029,11 @@ class LinuxPythonLauncherEditor(QMainWindow):
             self.update_status_label(f"Discarded changes for {os.path.basename(script_path)}")
 
     def save_module_code(self, script_path, editor):
+        target_dir = os.path.dirname(script_path)
+        if not os.path.exists(target_dir):
+            QMessageBox.critical(self, "Error", f"Target directory '{target_dir}' no longer exists. Could not save file.")
+            return
+
         try:
             content = editor.toPlainText()
             with open(script_path, 'w', encoding='utf-8') as f:
@@ -1064,6 +1056,8 @@ class LinuxPythonLauncherEditor(QMainWindow):
         return current_text != original_text
 
     def on_text_modified(self, script_path):
+        if self.is_navigating:
+            return
         self.update_nav_item_indicators()
         self.update_status_label(f"Modifying {os.path.basename(script_path)}")
 
@@ -1110,6 +1104,11 @@ class LinuxPythonLauncherEditor(QMainWindow):
         new_name, ok = QInputDialog.getText(self, "Rename Script", "Enter new filename (must end with .py):", text=current_filename)
         if ok and new_name:
             new_name = new_name.strip()
+            
+            if not self.is_valid_filename(new_name):
+                QMessageBox.warning(self, "Error", "Invalid characters in filename. Do not use slashes or relative paths.")
+                return
+                
             if not new_name.endswith(".py"):
                 new_name += ".py"
             
@@ -1127,6 +1126,15 @@ class LinuxPythonLauncherEditor(QMainWindow):
                     del self.processes[script_path]
 
                 os.rename(script_path, new_path)
+                
+                # Migrate dictionary keys so unsaved changes aren't wiped on refresh
+                if script_path in self.editors:
+                    self.editors[new_path] = self.editors.pop(script_path)
+                if script_path in self.original_contents:
+                    self.original_contents[new_path] = self.original_contents.pop(script_path)
+                if script_path in self.processes:
+                    self.processes[new_path] = self.processes.pop(script_path)
+                    
                 self.refresh_modules_from_disk()
                 self.update_status_label(f"Renamed to {new_name}")
             except Exception as e:
@@ -1138,13 +1146,15 @@ class LinuxPythonLauncherEditor(QMainWindow):
             is_currently_exec = bool(st.st_mode & stat.S_IXUSR)
             
             if is_currently_exec:
-                new_mode = st.st_mode & ~stat.S_IXUSR & ~stat.S_IXGRP & ~stat.S_IXOTH
+                # Remove execution rights for user
+                new_mode = st.st_mode & ~stat.S_IXUSR
                 os.chmod(script_path, new_mode)
                 action_text = "Make Executable"
                 status_msg = f"Removed executable permission from {os.path.basename(script_path)}"
                 popup_msg = f"'{os.path.basename(script_path)}' is no longer executable."
             else:
-                new_mode = st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+                # Grant execution rights exclusively to user
+                new_mode = st.st_mode | stat.S_IXUSR
                 os.chmod(script_path, new_mode)
                 action_text = "Make Unexecutable"
                 status_msg = f"Granted executable permission to {os.path.basename(script_path)}"
@@ -1179,6 +1189,16 @@ class LinuxPythonLauncherEditor(QMainWindow):
                 if file_path.endswith('.py'):
                     filename = os.path.basename(file_path)
                     dest_path = os.path.join(MODULES_DIR, filename)
+                    
+                    if os.path.exists(dest_path):
+                        reply = QMessageBox.question(
+                            self, "Overwrite File", 
+                            f"The file '{filename}' already exists. Do you want to overwrite it?", 
+                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                        )
+                        if reply == QMessageBox.StandardButton.No:
+                            continue
+                            
                     try:
                         shutil.copy(file_path, dest_path)
                         added_count += 1
@@ -1244,13 +1264,13 @@ class LinuxPythonLauncherEditor(QMainWindow):
         terminals = [
             ("gnome-terminal", ["gnome-terminal", "--", sys.executable, abs_path]),
             ("konsole", ["konsole", "-e", sys.executable, abs_path]),
-            ("xfce4-terminal", ["xfce4-terminal", "-e", f"{sys.executable} {abs_path}"]),
-            ("tilix", ["tilix", "-e", f"{sys.executable} {abs_path}"]),
+            ("xfce4-terminal", ["xfce4-terminal", "-e", sys.executable, abs_path]),
+            ("tilix", ["tilix", "-e", sys.executable, abs_path]),
             ("terminator", ["terminator", "-x", sys.executable, abs_path]),
             ("alacritty", ["alacritty", "-e", sys.executable, abs_path]),
             ("kitty", ["kitty", sys.executable, abs_path]),
             ("foot", ["foot", sys.executable, abs_path]),
-            ("xterm", ["xterm", "-hold", "-e", f"{sys.executable} {abs_path}"])
+            ("xterm", ["xterm", "-hold", "-e", sys.executable, abs_path])
         ]
 
         launched = False
@@ -1267,7 +1287,7 @@ class LinuxPythonLauncherEditor(QMainWindow):
         if not launched:
             QMessageBox.critical(
                 self, "Terminal Error", 
-                "No supported external Linux terminal emulator found (checked gnome-terminal, konsole, xfce4-terminal, alacritty, kitty, xterm, etc.)."
+                "No supported external Linux terminal emulator found."
             )
 
     def open_in_external_editor(self, script_path):
@@ -1311,7 +1331,7 @@ class LinuxPythonLauncherEditor(QMainWindow):
         if not opened:
             QMessageBox.critical(
                 self, "Editor Error", 
-                "No supported external text editor found (checked VS Code, VSCodium, Gedit, Kate, Geany, Mousepad, etc.)."
+                "No supported external text editor found."
             )
 
     def closeEvent(self, event):
@@ -1353,29 +1373,6 @@ class LinuxPythonLauncherEditor(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
-    # --- Force Dark Theme and Lock Against OS Styling ---
-    app.setStyle("Fusion")
-
-    from PyQt6.QtGui import QPalette
-    dark_palette = QPalette()
-    dark_palette.setColor(QPalette.ColorRole.Window, QColor(30, 30, 30))
-    dark_palette.setColor(QPalette.ColorRole.WindowText, QColor(220, 220, 220))
-    dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
-    dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(35, 35, 35))
-    dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
-    dark_palette.setColor(QPalette.ColorRole.ToolTipText, QColor(220, 220, 220))
-    dark_palette.setColor(QPalette.ColorRole.Text, QColor(220, 220, 220))
-    dark_palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 48))
-    dark_palette.setColor(QPalette.ColorRole.ButtonText, QColor(220, 220, 220))
-    dark_palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
-    dark_palette.setColor(QPalette.ColorRole.Link, QColor(0, 122, 204))
-    dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(0, 122, 204))
-    dark_palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
-
-    app.setPalette(dark_palette)
-    # ---------------------------------------------------
-
     suite = LinuxPythonLauncherEditor()
     suite.show()
     sys.exit(app.exec())
