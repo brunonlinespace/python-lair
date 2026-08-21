@@ -1,4 +1,4 @@
-# python-lair-legacy.py
+# Python Lair (legacy)
 A <b>refreshed version</b> of Python Lair is now available in: https://github.com/brunonlinespace/python-lair
 
 Hello, world!
