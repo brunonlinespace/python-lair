@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Python Lair 2
+GenericName=Python IDE and Script Launcher
+Comment=Lightweight Python IDE and launcher for Linux
+Exec=python-lair-2
+Icon=python-lair-2
+Terminal=false
+Categories=Development;IDE;Utility;
+Keywords=Python;IDE;Editor;Launcher;Scripts;
+StartupNotify=true
+StartupWMClass=python-lair-2
+X-AppImage-Version=2.1.1

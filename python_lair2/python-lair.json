@@ -1,0 +1,9 @@
+{
+  "name": "Python Lair",
+  "id": "python-lair",
+  "version": "2.1.1",
+  "publisher_id": "brunonlinespace",
+  "desktop_id": "io.github.brunonlinespace.python_lair",
+  "repository": "https://github.com/brunonlinespace/python-lair",
+  "tagline": "Friendly. Fast. Focused."
+}

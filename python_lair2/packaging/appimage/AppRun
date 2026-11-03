@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+
+APPDIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+BUNDLE="$APPDIR/usr/lib/python-lair-2"
+EXECUTABLE="$BUNDLE/python-lair-2"
+
+# Prevent packages installed in the user's home directory from leaking into
+# the frozen application. The host system is still used for external editors,
+# terminals, fonts and desktop integration.
+export PYTHONNOUSERSITE=1
+
+# PyInstaller normally configures Qt's plugin paths itself. Keep a defensive
+# fallback for future PyInstaller layout changes without overriding a valid
+# value already supplied by the bootloader.
+if [ -z "${QT_PLUGIN_PATH:-}" ]; then
+    for candidate in \
+        "$BUNDLE/_internal/PyQt6/Qt6/plugins" \
+        "$BUNDLE/PyQt6/Qt6/plugins"; do
+        if [ -d "$candidate" ]; then
+            export QT_PLUGIN_PATH="$candidate"
+            break
+        fi
+    done
+fi
+
+exec "$EXECUTABLE" "$@"
