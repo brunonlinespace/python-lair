@@ -1,0 +1,22 @@
+{
+  "id": "python-lair",
+  "name": "Python Lair",
+  "description": "Python application and project utility.",
+  "component_kind": "extension",
+  "extensions": [],
+  "portable_command": [
+    "main.py"
+  ],
+  "icon": "python_lair2/assets/icons/python-lair-2.png",
+  "version": "2.1.1",
+  "publisher": "brunonlinespace",
+  "repository": "https://github.com/brunonlinespace/python-lair",
+  "desktop_id": "python-lair",
+  "tagline": "Friendly. Fast. Focused.",
+  "publisher_id": "brunonlinespace",
+  "capabilities": {
+    "routing": false,
+    "open": false,
+    "create": false
+  }
+}
